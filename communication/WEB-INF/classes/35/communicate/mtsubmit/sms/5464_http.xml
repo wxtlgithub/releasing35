@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<bean id="gatewayId5464" class="java.lang.Integer">
+		<constructor-arg index="0" value="64" />
+	</bean>
+	<bean id="mtsSubmitQueue5464" class="com.lxt2.queuekc.CacheQueue"
+		destroy-method="destroy">
+		<property name="cache">
+			<bean class="ihandy.lxt20.persist.cache.Priority"
+				destroy-method="close" />
+		</property>
+		<property name="queueName" value="mtsSubmit5464" />
+		<property name="listener" ref="mtsSubmitQueueListener5464" />
+	</bean>
+
+	<!--短信下行队列监听器 -->
+	<bean id="mtsSubmitQueueListener5464" class="com.lxt2.gateway.http.listener.SubmitQueueListener">
+		<property name="sendQueue" ref="mtsQueuecache5464" />
+		<property name="hub" ref="hubImpl" />
+		<!-- <property name="filters"> <list> <ref local="smsSpeedControlFilter5464" 
+			/> <ref local="smsContentSendFilter5464" /> </list> </property> -->
+	</bean>
+
+	<!--短信发送队列监听器 -->
+	<bean id="mtsQueuecacheListener5464" class="com.lxt2.gateway.http.listener.SendQueueListener">
+		<property name="sender" ref="mtsSender5464" />
+		<property name="hub" ref="hubImpl" />
+		<!-- <property name="filters"> <list> <ref local="smsSpeedControlFilter5464" 
+			/> <ref local="smsContentSendFilter5464" /> </list> </property> -->
+	</bean>
+
+
+
+	<!-- 发送队列 -->
+	<bean id="mtsQueuecache5464" class="com.lxt2.queuekc.CacheQueue"
+		init-method="init" destroy-method="destroy">
+		<property name="cache">
+			<bean class="ihandy.lxt20.persist.cache.Priority" />
+		</property>
+		<property name="queueName" value="mtsSend5464" />
+	</bean>
+
+<!--速度控制过滤器 -->
+	<bean name="mtsEquidistributionSpeeder5464" class="com.techcenter.speed.IntervalSecondSpeeder"
+		destroy-method="destroy">
+                <constructor-arg index="0" value="300" />
+		<constructor-arg index="1" value="1000" />
+	</bean>
+	<bean id="smsExceptionHandle" class="com.lxt2.gateway.http.service.ExceptionHandle">
+		<property name="verifyService" ref="ndClientVerify"/>
+		<property name="sid" ref="ndSid"/>
+		<property name="saveLogger" ref="saveLogger"/>
+	</bean>
+	<bean id="respInHubService5464" class="com.lxt2.gateway.http.service.RespInHubService">
+		<property name="exceptionHandle" ref="smsExceptionHandle" />
+		<property name="sid" ref="ndSid" />
+		<property name="hub" ref="hubImpl" />
+		<property name="saveLogger" ref="saveLogger" />
+	</bean>
+	<bean id="packageDB5464" class="com.lxt2.gateway.http.db.PackageDB"
+		init-method="open"   scope="singleton" >
+		<property name="path" value="${WORKDIR}../../../data/" />
+		<property name="fileName" value="smsContent64" />
+	</bean>
+	<!-- 下行处理类,该类由客户实现 -->
+	<bean id="mtsSender5464" class="com.lxt2.gateway.http.api.HttpSmsSender"
+		init-method="init">
+		<!-- 网关ID -->
+		<property name="gatewayId" ref="gatewayId5464" />
+		<property name="nodeGatewayID" value="${nodeID}" />
+		<property name="contentDB" ref="packageDB5464" />
+		<!-- 网关配置解析 -->
+		<property name="gatewayXmlParser" ref="gatewayXml" />
+		<property name="respInHubService" ref="respInHubService5464" />
+		<property name="equidistributionSpeeder" ref="mtsEquidistributionSpeeder5464" />
+		<property name="hub" ref="hubImpl" />
+		<property name="reSend" value="true" />
+		<property name="threadCount" value="6" />
+                <property name="reSendCount" value="3" />
+		<property name="sid" ref="ndSid" />
+		<property name="cacheQueue" ref="mtsQueuecache5464" />
+		<!-- <property name="spliterMap" ref="mtsSpliterMap5464" /> -->
+		<property name="dataGather" ref="mtsDataGather5464" />
+		<property name="spliterMap" ref="mtsSpliterMap5464" />
+		<property name="saveLogger" ref="saveLogger" />
+                <property name="exceptionHandler" ref="smsExceptionHandle" />
+	</bean>
+	
+	<!-- 拆分抽象bean -->
+	<bean id="mtsAbstractSpliter5464" abstract="true" lazy-init="true">
+		<!-- 网关ID -->
+		<property name="gatewayId" ref="gatewayId5464" />
+		<property name="nodeGatewayID" value="${nodeID}" />
+		<!-- 网关配置解析 -->
+		<property name="gatewayXmlParser" ref="gatewayXml" />
+	</bean>
+	<bean id="mtsSpliterMap5464" class="java.util.HashMap">
+		<constructor-arg index="0">
+			<map>
+				<entry key="15">
+					<bean class="com.techcenter.spliter.LongSmsSpliter"
+						parent="mtsAbstractSpliter5464" init-method="init" />
+				</entry>
+				<entry key="32">
+					<bean class="com.techcenter.spliter.LongSmsSpliter"
+						parent="mtsAbstractSpliter5464" init-method="init" />
+				</entry>
+			</map>
+		</constructor-arg>
+	</bean>
+	
+	
+	<bean id="ContentMsgIDCleanTask" class="com.lxt2.gateway.http.db.ContentMsgIDCleanTask">
+		<property name="id" value="509" />
+		<property name="db" ref="packageDB5464" />
+		<property name="name" value="短信msgID定时清理" />
+		<!-- 短信msgID清理时间(单位:小时) ,按实际需求修改-->
+		<property name="outTime" value="72" />
+		<!-- 每1分钟执行任务 -->
+		<property name="taskSchRule" value="@{cycle(60)}" />
+	</bean>
+
+</beans>
