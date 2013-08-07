@@ -91,6 +91,7 @@
       		<FileNamePattern>${USER_HOME}gateway/gateway_${GATEWAYID}/gw${GATEWAYID}-reportinfo.%i.log.zip</FileNamePattern>
       		<MinIndex>1</MinIndex>
       		<MaxIndex>100</MaxIndex>
+                <MaxHistory>100</MaxHistory>
     	</rollingPolicy>
 	   	<triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
      		<MaxFileSize>${SIZEBASE_MAX_SIZE}</MaxFileSize>
